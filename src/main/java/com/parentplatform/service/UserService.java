@@ -17,6 +17,10 @@ public class UserService {
     @Autowired
     private UserRepository userRepository;
 
+    public Optional<User> findById(Long id) {
+        return userRepository.findById(id);
+    }
+
     private String encodePassword(String password) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
