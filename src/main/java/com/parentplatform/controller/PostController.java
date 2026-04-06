@@ -1,7 +1,9 @@
 package com.parentplatform.controller;
 
+import com.parentplatform.model.Comment;
 import com.parentplatform.model.Post;
 import com.parentplatform.model.User;
+import com.parentplatform.service.LikePostService;
 import com.parentplatform.service.PostService;
 import com.parentplatform.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +30,9 @@ public class PostController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private LikePostService likeService;  // AJOUTER @Autowired ICI
 
     @PostMapping("/create")
     public ResponseEntity<?> create(
@@ -111,7 +116,7 @@ public class PostController {
 
                 List<Map<String, Object>> commentList = new ArrayList<>();
                 if (post.getComments() != null) {
-                    for (com.parentplatform.model.Comment comment : post.getComments()) {
+                    for (Comment comment : post.getComments()) {
                         Map<String, Object> c = new HashMap<>();
                         c.put("id", comment.getId());
                         c.put("contenu", comment.getContenu());
@@ -198,6 +203,96 @@ public class PostController {
             errorResponse.put("error", "Erreur: " + e.getMessage());
             errorResponse.put("success", "false");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+    @GetMapping("/all-posts")
+    public ResponseEntity<?> getAllPostsForFeed() {
+        try {
+            List<Post> posts = postService.findAll();
+
+            // Trier les posts par date (du plus récent au plus ancien)
+            posts.sort((p1, p2) -> p2.getCreatedAt().compareTo(p1.getCreatedAt()));
+
+            List<Map<String, Object>> formattedPosts = new ArrayList<>();
+
+            for (Post post : posts) {
+                Map<String, Object> p = new HashMap<>();
+                p.put("id", post.getId());
+                p.put("contenu", post.getContenu());
+                p.put("createdAt", post.getCreatedAt().toString());
+
+                // Utiliser likeService en toute sécurité
+                int likesCount = 0;
+                boolean isLiked = false;
+
+                if (likeService != null) {
+                    try {
+                        likesCount = likeService.countByPost(post);
+                        if (post.getUser() != null) {
+                            Optional<User> userOpt = userService.findById(post.getUser().getId());
+                            if (userOpt.isPresent()) {
+                                isLiked = likeService.isLiked(userOpt.get(), post);
+                            }
+                        }
+                    } catch (Exception e) {
+                        // Ignorer les erreurs de likeService
+                    }
+                }
+
+                p.put("likesCount", likesCount);
+                p.put("liked", isLiked);
+                p.put("imageData", post.getImageData());
+                p.put("imageType", post.getImageType());
+                p.put("fileData", post.getFileData());
+                p.put("fileType", post.getFileType());
+                p.put("fileName", post.getFileName());
+
+                // Ajouter les informations de l'utilisateur
+                if (post.getUser() != null) {
+                    Map<String, Object> userMap = new HashMap<>();
+                    userMap.put("id", post.getUser().getId());
+                    userMap.put("nom", post.getUser().getNom());
+                    userMap.put("email", post.getUser().getEmail());
+                    userMap.put("role", post.getUser().getRole().name());
+                    p.put("user", userMap);
+                }
+
+                // Ajouter les commentaires
+                List<Map<String, Object>> commentList = new ArrayList<>();
+                if (post.getComments() != null) {
+                    for (Comment comment : post.getComments()) {
+                        Map<String, Object> c = new HashMap<>();
+                        c.put("id", comment.getId());
+                        c.put("contenu", comment.getContenu());
+                        c.put("createdAt", comment.getCreatedAt());
+
+                        if (comment.getUser() != null) {
+                            Map<String, Object> commentUser = new HashMap<>();
+                            commentUser.put("id", comment.getUser().getId());
+                            commentUser.put("nom", comment.getUser().getNom());
+                            c.put("user", commentUser);
+                        }
+                        commentList.add(c);
+                    }
+                }
+                p.put("comments", commentList);
+                p.put("commentsCount", commentList.size());
+
+                formattedPosts.add(p);
+            }
+
+            return ResponseEntity.ok(Map.of(
+                    "posts", formattedPosts,
+                    "count", formattedPosts.size(),
+                    "success", true
+            ));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of(
+                    "error", e.getMessage(),
+                    "success", false
+            ));
         }
     }
 }

@@ -74,4 +74,29 @@ public class MessageRestController {
             return ResponseEntity.status(500).body(Map.of("error", e.getMessage(), "success", false));
         }
     }
+    // Marquer une conversation comme lue sans l'ouvrir
+    @PostMapping("/mark-read")
+    public ResponseEntity<?> markConversationAsRead(@RequestBody Map<String, Long> request) {
+        try {
+            Long userId = request.get("userId");
+            Long otherUserId = request.get("otherUserId");
+
+            messageService.markMessagesAsRead(userId, otherUserId);
+
+            return ResponseEntity.ok(Map.of("success", true, "message", "Messages marqués comme lus"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("success", false, "error", e.getMessage()));
+        }
+    }
+
+    // Supprimer une conversation
+    @DeleteMapping("/conversation/{conversationId}")
+    public ResponseEntity<?> deleteConversation(@PathVariable Long conversationId) {
+        try {
+            messageService.deleteConversation(conversationId);
+            return ResponseEntity.ok(Map.of("success", true, "message", "Conversation supprimée"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("success", false, "error", e.getMessage()));
+        }
+    }
 }

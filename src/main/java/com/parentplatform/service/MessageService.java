@@ -37,6 +37,10 @@ public class MessageService {
 
         return savedMessage;
     }
+    @Transactional
+    public void deleteConversation(Long conversationId) {
+        conversationRepository.deleteById(conversationId);
+    }
 
     private void updateConversation(User sender, User receiver, String lastMessage) {
         Optional<Conversation> existingConv = conversationRepository.findByUser1AndUser2(sender, receiver);
