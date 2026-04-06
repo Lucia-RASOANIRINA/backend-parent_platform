@@ -8,12 +8,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = "*", allowedHeaders = "*")
+@CrossOrigin(originPatterns = "*", allowCredentials = "true", allowedHeaders = "*")
 public class AuthController {
 
     @Autowired
@@ -43,7 +45,7 @@ public class AuthController {
             if (u.isPresent()) {
                 Map<String, Object> response = new HashMap<>();
                 response.put("user", u.get());
-                response.put("token", "dummy-token-" + System.currentTimeMillis()); // À remplacer par un vrai JWT
+                response.put("token", "dummy-token-" + System.currentTimeMillis());
                 return ResponseEntity.ok(response);
             } else {
                 Map<String, String> errorResponse = new HashMap<>();
@@ -54,6 +56,72 @@ public class AuthController {
             Map<String, String> errorResponse = new HashMap<>();
             errorResponse.put("message", "Erreur lors de la connexion: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+    // Récupérer tous les utilisateurs
+    @GetMapping("/users")
+    public ResponseEntity<?> getAllUsers() {
+        try {
+            List<User> users = userService.findAll();
+
+            List<Map<String, Object>> formattedUsers = users.stream().map(user -> {
+                Map<String, Object> u = new HashMap<>();
+                u.put("id", user.getId());
+                u.put("nom", user.getNom());
+                u.put("email", user.getEmail());
+                u.put("role", user.getRole().name());
+                return u;
+            }).collect(Collectors.toList());
+
+            return ResponseEntity.ok(Map.of("users", formattedUsers, "success", true));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage(), "success", false));
+        }
+    }
+
+    // Rechercher des utilisateurs
+    @GetMapping("/users/search")
+    public ResponseEntity<?> searchUsers(@RequestParam String query) {
+        try {
+            System.out.println("Recherche utilisateurs: " + query);
+            List<User> users = userService.searchUsers(query);
+
+            List<Map<String, Object>> formattedUsers = users.stream()
+                    .filter(user -> user.getId() != 1)
+                    .map(user -> {
+                        Map<String, Object> u = new HashMap<>();
+                        u.put("id", user.getId());
+                        u.put("nom", user.getNom());
+                        u.put("email", user.getEmail());
+                        u.put("role", user.getRole().name());
+                        return u;
+                    }).collect(Collectors.toList());
+
+            return ResponseEntity.ok(Map.of("users", formattedUsers, "success", true));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage(), "success", false));
+        }
+    }
+
+    // Récupérer un utilisateur par ID
+    @GetMapping("/users/{id}")
+    public ResponseEntity<?> getUserById(@PathVariable Long id) {
+        try {
+            Optional<User> user = userService.findById(id);
+            if (user.isPresent()) {
+                Map<String, Object> formattedUser = new HashMap<>();
+                formattedUser.put("id", user.get().getId());
+                formattedUser.put("nom", user.get().getNom());
+                formattedUser.put("email", user.get().getEmail());
+                formattedUser.put("role", user.get().getRole().name());
+                return ResponseEntity.ok(Map.of("user", formattedUser, "success", true));
+            } else {
+                return ResponseEntity.status(404).body(Map.of("error", "Utilisateur non trouvé", "success", false));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage(), "success", false));
         }
     }
 }

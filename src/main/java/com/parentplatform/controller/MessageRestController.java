@@ -1,0 +1,77 @@
+package com.parentplatform.controller;
+
+import com.parentplatform.model.Message;
+import com.parentplatform.model.User;
+import com.parentplatform.service.MessageService;
+import com.parentplatform.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+@RestController
+@RequestMapping("/api/messages")
+@CrossOrigin(origins = "*", allowedHeaders = "*")
+public class MessageRestController {
+
+    @Autowired
+    private MessageService messageService;
+
+    @Autowired
+    private UserService userService;
+
+    @GetMapping("/conversation/{userId1}/{userId2}")
+    public ResponseEntity<?> getConversation(@PathVariable Long userId1, @PathVariable Long userId2) {
+        try {
+            System.out.println("Récupération conversation entre " + userId1 + " et " + userId2);
+            List<Message> messages = messageService.getConversation(userId1, userId2);
+
+            List<Map<String, Object>> formattedMessages = new java.util.ArrayList<>();
+            for (Message msg : messages) {
+                Map<String, Object> m = new HashMap<>();
+                m.put("id", msg.getId());
+                m.put("contenu", msg.getContenu());
+                m.put("createdAt", msg.getCreatedAt());
+                m.put("isRead", msg.isRead());
+                m.put("messageType", msg.getMessageType());
+                m.put("fileData", msg.getFileData());
+                m.put("fileName", msg.getFileName());
+
+                Map<String, Object> sender = new HashMap<>();
+                if (msg.getSender() != null) {
+                    sender.put("id", msg.getSender().getId());
+                    sender.put("nom", msg.getSender().getNom());
+                }
+                m.put("sender", sender);
+
+                formattedMessages.add(m);
+            }
+
+            return ResponseEntity.ok(Map.of("messages", formattedMessages, "success", true));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage(), "success", false));
+        }
+    }
+
+    @GetMapping("/conversations/{userId}")
+    public ResponseEntity<?> getConversations(@PathVariable Long userId) {
+        try {
+            System.out.println("Récupération conversations pour user: " + userId);
+            Optional<User> userOpt = userService.findById(userId);
+            if (userOpt.isEmpty()) {
+                return ResponseEntity.status(404).body(Map.of("error", "User not found", "success", false));
+            }
+
+            Map<String, Object> conversations = messageService.getConversationsList(userId);
+            return ResponseEntity.ok(conversations);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage(), "success", false));
+        }
+    }
+}
