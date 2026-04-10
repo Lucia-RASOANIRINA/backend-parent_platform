@@ -7,7 +7,10 @@ import com.parentplatform.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
 
@@ -70,11 +73,36 @@ public class PostService {
     }
 
     @Transactional
-    public Post updatePost(Long id, String contenu, Long userId) {
+    public Post updatePost(Long id, String contenu, Long userId,
+                           MultipartFile image, MultipartFile file,
+                           boolean removeImage, boolean removeFile) throws IOException {
         Optional<Post> postOpt = postRepository.findById(id);
         if (postOpt.isPresent() && postOpt.get().getUser().getId().equals(userId)) {
             Post post = postOpt.get();
             post.setContenu(contenu);
+
+            // Gestion de l'image
+            if (removeImage) {
+                post.setImageData(null);
+                post.setImageType(null);
+            } else if (image != null && !image.isEmpty()) {
+                String imageBase64 = Base64.getEncoder().encodeToString(image.getBytes());
+                post.setImageData(imageBase64);
+                post.setImageType(image.getContentType());
+            }
+
+            // Gestion du fichier (PDF)
+            if (removeFile) {
+                post.setFileData(null);
+                post.setFileType(null);
+                post.setFileName(null);
+            } else if (file != null && !file.isEmpty()) {
+                String fileBase64 = Base64.getEncoder().encodeToString(file.getBytes());
+                post.setFileData(fileBase64);
+                post.setFileType(file.getContentType());
+                post.setFileName(file.getOriginalFilename());
+            }
+
             return postRepository.save(post);
         }
         return null;

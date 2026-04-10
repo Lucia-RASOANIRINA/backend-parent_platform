@@ -32,7 +32,7 @@ public class PostController {
     private UserService userService;
 
     @Autowired
-    private LikePostService likeService;  // AJOUTER @Autowired ICI
+    private LikePostService likeService;
 
     @PostMapping("/create")
     public ResponseEntity<?> create(
@@ -152,14 +152,19 @@ public class PostController {
         }
     }
 
+    // NOUVELLE méthode updatePost avec gestion des fichiers et suppression
     @PutMapping("/update/{id}")
     public ResponseEntity<?> updatePost(
             @PathVariable Long id,
             @RequestParam("contenu") String contenu,
-            @RequestParam("userId") Long userId) {
+            @RequestParam("userId") Long userId,
+            @RequestParam(value = "image", required = false) MultipartFile image,
+            @RequestParam(value = "file", required = false) MultipartFile file,
+            @RequestParam(value = "removeImage", required = false, defaultValue = "false") boolean removeImage,
+            @RequestParam(value = "removeFile", required = false, defaultValue = "false") boolean removeFile) {
 
         try {
-            Post updatedPost = postService.updatePost(id, contenu, userId);
+            Post updatedPost = postService.updatePost(id, contenu, userId, image, file, removeImage, removeFile);
             if (updatedPost != null) {
                 Map<String, Object> response = new HashMap<>();
                 response.put("message", "Post mis à jour avec succès");
@@ -211,7 +216,6 @@ public class PostController {
         try {
             List<Post> posts = postService.findAll();
 
-            // Trier les posts par date (du plus récent au plus ancien)
             posts.sort((p1, p2) -> p2.getCreatedAt().compareTo(p1.getCreatedAt()));
 
             List<Map<String, Object>> formattedPosts = new ArrayList<>();
@@ -222,7 +226,6 @@ public class PostController {
                 p.put("contenu", post.getContenu());
                 p.put("createdAt", post.getCreatedAt().toString());
 
-                // Utiliser likeService en toute sécurité
                 int likesCount = 0;
                 boolean isLiked = false;
 
@@ -236,7 +239,7 @@ public class PostController {
                             }
                         }
                     } catch (Exception e) {
-                        // Ignorer les erreurs de likeService
+                        // ignore
                     }
                 }
 
@@ -248,7 +251,6 @@ public class PostController {
                 p.put("fileType", post.getFileType());
                 p.put("fileName", post.getFileName());
 
-                // Ajouter les informations de l'utilisateur
                 if (post.getUser() != null) {
                     Map<String, Object> userMap = new HashMap<>();
                     userMap.put("id", post.getUser().getId());
@@ -258,7 +260,6 @@ public class PostController {
                     p.put("user", userMap);
                 }
 
-                // Ajouter les commentaires
                 List<Map<String, Object>> commentList = new ArrayList<>();
                 if (post.getComments() != null) {
                     for (Comment comment : post.getComments()) {
