@@ -1,7 +1,6 @@
 package com.parentplatform.model;
 
 import jakarta.persistence.*;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -25,7 +24,7 @@ public class Resource {
     private String fullContent;
 
     @Column(nullable = false)
-    private String type; // fiche, video, pdf, bloc
+    private String type;
 
     private String age;
 
@@ -41,7 +40,15 @@ public class Resource {
 
     private boolean shared = false;
 
-    private LocalDate surpriseWeekStart; // début de semaine où c'est la surprise
+    private LocalDate surpriseWeekStart;
+
+    // Nouveau champ binaire avec type explicite bytea pour PostgreSQL
+    @Column(columnDefinition = "bytea")
+    private byte[] fileContent;
+
+    private String fileType;
+
+    private String fileName;
 
     @ElementCollection
     @CollectionTable(name = "resource_preview_blocks", joinColumns = @JoinColumn(name = "resource_id"))
@@ -50,7 +57,7 @@ public class Resource {
 
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    // Getters et setters (à générer)
+    // Getters et setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getTitle() { return title; }
@@ -81,4 +88,10 @@ public class Resource {
     public void setPreviewBlocks(List<String> previewBlocks) { this.previewBlocks = previewBlocks; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public byte[] getFileContent() { return fileContent; }
+    public void setFileContent(byte[] fileContent) { this.fileContent = fileContent; }
+    public String getFileType() { return fileType; }
+    public void setFileType(String fileType) { this.fileType = fileType; }
+    public String getFileName() { return fileName; }
+    public void setFileName(String fileName) { this.fileName = fileName; }
 }

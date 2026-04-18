@@ -6,4 +6,6 @@ import java.util.List;
 
 public interface ResourceCommentRepository extends JpaRepository<ResourceComment, Long> {
     List<ResourceComment> findByResourceIdOrderByCreatedAtDesc(Long resourceId);
+
+    List<ResourceComment> findByResourceId(Long resourceId);
 }
