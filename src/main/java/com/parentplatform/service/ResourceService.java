@@ -12,7 +12,11 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.TemporalAdjusters;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class ResourceService {
@@ -26,18 +30,37 @@ public class ResourceService {
     @Autowired
     private ScheduledResourceRepository scheduledResourceRepository;
 
-    public List<Resource> getResources(Long currentUserId, String type, String age, String search, String owner) {
-        List<Resource> resources;
-        if ("mine".equals(owner)) {
-            resources = resourceRepository.findByOwnerId(currentUserId);
-        } else if ("shared".equals(owner)) {
-            resources = resourceRepository.findByOwnerIdNot(currentUserId);
-        } else {
-            resources = resourceRepository.searchResources(type, age, search);
-        }
-        // On enlève le contenu binaire des réponses en liste
-        resources.forEach(r -> r.setFileContent(null));
-        return resources;
+    @Autowired
+    private ResourceLikeRepository resourceLikeRepository;
+
+    @Autowired
+    private ResourceRatingRepository resourceRatingRepository;
+
+    public List<Map<String, Object>> getResources(Long currentUserId, String type, String age, String search, String owner) {
+        List<Resource> resources = resourceRepository.findByFilters(type, age, search, owner, currentUserId);
+        return resources.stream().map(r -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", r.getId());
+            map.put("title", r.getTitle());
+            map.put("description", r.getDescription());
+            map.put("type", r.getType());
+            map.put("age", r.getAge());
+            map.put("fileType", r.getFileType());
+            map.put("fileName", r.getFileName());
+            map.put("videoUrl", r.getVideoUrl());
+            map.put("createdAt", r.getCreatedAt());
+            map.put("updatedAt", r.getUpdatedAt());
+            map.put("likes", r.getLikes());
+            map.put("averageRating", r.getAverageRating());
+            map.put("totalRatings", r.getTotalRatings());
+            boolean liked = resourceLikeRepository.existsByResourceIdAndUserId(r.getId(), currentUserId);
+            map.put("liked", liked);
+            boolean userRated = resourceRatingRepository.existsByResourceIdAndUserId(r.getId(), currentUserId);
+            map.put("userRated", userRated);
+            Optional<ScheduledResource> scheduled = scheduledResourceRepository.findFirstByResourceIdAndParentId(r.getId(), currentUserId);
+            scheduled.ifPresent(sr -> map.put("scheduledAt", sr.getScheduledAt()));
+            return map;
+        }).collect(Collectors.toList());
     }
 
     public Resource getResourceById(Long id) {
@@ -55,6 +78,8 @@ public class ResourceService {
         resource.setOwnerId(currentUserId);
         resource.setShared(false);
         resource.setCreatedAt(LocalDateTime.now());
+        resource.setUpdatedAt(LocalDateTime.now());
+        resource.setVideoUrl(dto.getVideoUrl());
 
         MultipartFile file = dto.getFile();
         if (file != null && !file.isEmpty()) {
@@ -75,24 +100,30 @@ public class ResourceService {
     }
 
     @Transactional
-    public void addLike(Long resourceId) {
-        Resource r = resourceRepository.findById(resourceId).orElse(null);
-        if (r != null) {
-            r.setLikes(r.getLikes() + 1);
-            resourceRepository.save(r);
+    public void addLike(Long resourceId, Long userId) {
+        if (resourceLikeRepository.existsByResourceIdAndUserId(resourceId, userId)) {
+            throw new RuntimeException("Déjà liké");
         }
+        ResourceLike like = new ResourceLike();
+        like.setResourceId(resourceId);
+        like.setUserId(userId);
+        resourceLikeRepository.save(like);
+        resourceRepository.incrementLikes(resourceId);
     }
 
     @Transactional
-    public void addRating(Long resourceId, int rating) {
-        Resource r = resourceRepository.findById(resourceId).orElse(null);
-        if (r != null && rating >= 1 && rating <= 5) {
-            int total = r.getTotalRatings() + 1;
-            double newAvg = (r.getAverageRating() * r.getTotalRatings() + rating) / total;
-            r.setAverageRating(newAvg);
-            r.setTotalRatings(total);
-            resourceRepository.save(r);
+    public void addRating(Long resourceId, Long userId, Integer rating) {
+        if (resourceRatingRepository.existsByResourceIdAndUserId(resourceId, userId)) {
+            throw new RuntimeException("Déjà noté");
         }
+        ResourceRating rr = new ResourceRating();
+        rr.setResourceId(resourceId);
+        rr.setUserId(userId);
+        rr.setRating(rating);
+        resourceRatingRepository.save(rr);
+        Double avg = resourceRatingRepository.getAverageRating(resourceId);
+        Long count = resourceRatingRepository.countByResourceId(resourceId);
+        resourceRepository.updateRatingStats(resourceId, avg, count);
     }
 
     @Transactional
@@ -129,6 +160,11 @@ public class ResourceService {
         return scheduledResourceRepository.save(sr);
     }
 
+    @Transactional
+    public void removeSchedule(Long resourceId, Long userId) {
+        scheduledResourceRepository.deleteByResourceIdAndParentId(resourceId, userId);
+    }
+
     public Resource getCurrentSurprise() {
         LocalDate weekStart = LocalDate.now().with(TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY));
         return resourceRepository.findBySurpriseWeekStart(weekStart).orElse(null);
@@ -154,6 +190,8 @@ public class ResourceService {
         existing.setType(dto.getType());
         existing.setAge(dto.getAge());
         existing.setFullContent(dto.getFullContent());
+        existing.setUpdatedAt(LocalDateTime.now());
+        existing.setVideoUrl(dto.getVideoUrl());
 
         MultipartFile file = dto.getFile();
         if (file != null && !file.isEmpty()) {
@@ -174,14 +212,11 @@ public class ResourceService {
         if (existing == null || !existing.getOwnerId().equals(currentUserId)) {
             return false;
         }
-        // 1. Supprimer les commentaires associés
         List<ResourceComment> comments = commentRepository.findByResourceId(id);
         if (comments != null && !comments.isEmpty()) {
             commentRepository.deleteAll(comments);
         }
-        // 2. Vider les blocs de prévisualisation (optionnel)
         existing.getPreviewBlocks().clear();
-        // 3. Supprimer la ressource
         resourceRepository.delete(existing);
         return true;
     }

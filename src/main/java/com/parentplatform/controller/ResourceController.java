@@ -68,14 +68,17 @@ public class ResourceController {
     }
 
     @PostMapping("/{id}/like")
-    public ResponseEntity<?> likeResource(@PathVariable Long id) {
-        resourceService.addLike(id);
+    public ResponseEntity<?> likeResource(@PathVariable Long id,
+                                          @RequestHeader("X-User-Id") Long userId) {
+        resourceService.addLike(id, userId);
         return ResponseEntity.ok(Map.of("success", true));
     }
 
     @PostMapping("/{id}/rating")
-    public ResponseEntity<?> rateResource(@PathVariable Long id, @RequestBody Map<String, Integer> payload) {
-        resourceService.addRating(id, payload.get("rating"));
+    public ResponseEntity<?> rateResource(@PathVariable Long id,
+                                          @RequestBody Map<String, Integer> payload,
+                                          @RequestHeader("X-User-Id") Long userId) {
+        resourceService.addRating(id, userId, payload.get("rating"));
         return ResponseEntity.ok(Map.of("success", true));
     }
 
@@ -157,5 +160,12 @@ public class ResourceController {
                     .body(Map.of("error", "Ressource non trouvée ou non autorisée"));
         }
         return ResponseEntity.ok(Map.of("success", true, "message", "Ressource supprimée"));
+    }
+
+    @DeleteMapping("/{id}/schedule")
+    public ResponseEntity<?> removeSchedule(@PathVariable Long id,
+                                            @RequestHeader("X-User-Id") Long userId) {
+        resourceService.removeSchedule(id, userId);
+        return ResponseEntity.ok(Map.of("success", true));
     }
 }

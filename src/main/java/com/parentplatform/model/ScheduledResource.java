@@ -1,26 +1,20 @@
 package com.parentplatform.model;
 
 import jakarta.persistence.*;
-
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "scheduled_resources")
 public class ScheduledResource {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
     private Long resourceId;
-
-    private Long parentId; // ou groupe de parents
-
+    private Long parentId;
     private LocalDateTime scheduledAt;
-
     private boolean sent = false;
 
-    // getters/setters
+    // getters et setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public Long getResourceId() { return resourceId; }

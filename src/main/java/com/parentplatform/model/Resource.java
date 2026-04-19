@@ -57,6 +57,14 @@ public class Resource {
 
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    private String videoUrl;
+    private LocalDateTime updatedAt;
+    // getters et setters
+    public String getVideoUrl() { return videoUrl; }
+    public void setVideoUrl(String videoUrl) { this.videoUrl = videoUrl; }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
     // Getters et setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
