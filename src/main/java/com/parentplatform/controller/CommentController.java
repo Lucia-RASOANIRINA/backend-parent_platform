@@ -10,11 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/comments")
@@ -80,5 +76,69 @@ public class CommentController {
         response.put("success", true);
 
         return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/{commentId}")
+    public ResponseEntity<?> updateComment(@PathVariable Long commentId,
+                                           @RequestBody Map<String, String> payload,
+                                           @RequestHeader("X-User-Id") Long userId) {
+        try {
+            Optional<Comment> commentOpt = commentService.findById(commentId);
+            if (!commentOpt.isPresent()) {
+                return ResponseEntity.status(404).body(Map.of("success", false, "error", "Commentaire non trouvé"));
+            }
+            Comment comment = commentOpt.get();
+            if (!comment.getUser().getId().equals(userId)) {
+                return ResponseEntity.status(403).body(Map.of("success", false, "error", "Vous n'êtes pas l'auteur de ce commentaire"));
+            }
+            String newContent = payload.get("contenu");
+            if (newContent == null || newContent.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("success", false, "error", "Le contenu ne peut pas être vide"));
+            }
+            comment.setContenu(newContent);
+            Comment saved = commentService.save(comment);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("comment", saved);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("success", false, "error", e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/{commentId}")
+    public ResponseEntity<?> deleteComment(@PathVariable Long commentId,
+                                           @RequestHeader("X-User-Id") Long userId) {
+        try {
+            Optional<Comment> commentOpt = commentService.findById(commentId);
+            if (!commentOpt.isPresent()) {
+                return ResponseEntity.status(404).body(Map.of("success", false, "error", "Commentaire non trouvé"));
+            }
+            Comment comment = commentOpt.get();
+            if (!comment.getUser().getId().equals(userId)) {
+                return ResponseEntity.status(403).body(Map.of("success", false, "error", "Vous n'êtes pas l'auteur de ce commentaire"));
+            }
+            commentService.delete(commentId);
+            return ResponseEntity.ok(Map.of("success", true, "message", "Commentaire supprimé"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("success", false, "error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/received/users/{userId}")
+    public ResponseEntity<?> getUsersWhoCommentedMyPosts(@PathVariable Long userId) {
+        Optional<User> userOpt = userService.findById(userId);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "error", "Utilisateur non trouvé"));
+        }
+        List<Post> posts = postService.findByUserId(userId);
+        Set<User> uniqueUsers = new HashSet<>();
+        for (Post post : posts) {
+            List<Comment> comments = commentService.getCommentsByPost(post);
+            for (Comment comment : comments) {
+                uniqueUsers.add(comment.getUser());
+            }
+        }
+        return ResponseEntity.ok(Map.of("success", true, "users", uniqueUsers));
     }
 }

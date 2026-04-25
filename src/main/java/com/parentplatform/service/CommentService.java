@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 public class CommentService {
@@ -55,5 +56,18 @@ public class CommentService {
     @Transactional
     public void deleteByPost(Post post) {
         commentRepository.deleteByPost(post);
+    }
+
+    public Optional<Comment> findById(Long id) {
+        return commentRepository.findById(id);
+    }
+
+    public Comment save(Comment comment) {
+        return commentRepository.save(comment);
+    }
+
+    @Transactional
+    public void delete(Long id) {
+        commentRepository.deleteById(id);
     }
 }

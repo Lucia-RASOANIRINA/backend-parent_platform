@@ -124,4 +124,16 @@ public class AuthController {
             return ResponseEntity.status(500).body(Map.of("error", e.getMessage(), "success", false));
         }
     }
+    @PutMapping("/profile")
+    public ResponseEntity<?> updateProfile(@RequestBody User updatedUser, @RequestHeader("X-User-Id") Long userId) {
+        try {
+            User user = userService.updateProfile(userId, updatedUser);
+            Map<String, Object> response = new HashMap<>();
+            response.put("user", user);
+            response.put("success", true);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(400).body(Map.of("error", e.getMessage(), "success", false));
+        }
+    }
 }

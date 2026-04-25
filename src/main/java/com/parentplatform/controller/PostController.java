@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.ArrayList;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/posts")
@@ -152,7 +153,6 @@ public class PostController {
         }
     }
 
-    // NOUVELLE méthode updatePost avec gestion des fichiers et suppression
     @PutMapping("/update/{id}")
     public ResponseEntity<?> updatePost(
             @PathVariable Long id,
@@ -238,9 +238,7 @@ public class PostController {
                                 isLiked = likeService.isLiked(userOpt.get(), post);
                             }
                         }
-                    } catch (Exception e) {
-                        // ignore
-                    }
+                    } catch (Exception e) {}
                 }
 
                 p.put("likesCount", likesCount);
@@ -267,7 +265,6 @@ public class PostController {
                         c.put("id", comment.getId());
                         c.put("contenu", comment.getContenu());
                         c.put("createdAt", comment.getCreatedAt());
-
                         if (comment.getUser() != null) {
                             Map<String, Object> commentUser = new HashMap<>();
                             commentUser.put("id", comment.getUser().getId());
@@ -295,5 +292,84 @@ public class PostController {
                     "success", false
             ));
         }
+    }
+
+    @GetMapping("/commented-by/{userId}")
+    public ResponseEntity<?> getPostsCommentedByUser(@PathVariable Long userId) {
+        try {
+            Optional<User> userOpt = userService.findById(userId);
+            if (!userOpt.isPresent()) {
+                return ResponseEntity.status(404).body(Map.of("success", false, "error", "Utilisateur non trouvé"));
+            }
+            List<Post> posts = postService.findPostsCommentedByUser(userId);
+            List<Map<String, Object>> formatted = formatPostsList(posts, userId);
+            return ResponseEntity.ok(Map.of("success", true, "posts", formatted));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("success", false, "error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/recommended/{userId}")
+    public ResponseEntity<?> getRecommendedPosts(@PathVariable Long userId) {
+        try {
+            List<Post> allPosts = postService.findAll();
+            List<Post> filtered = allPosts.stream()
+                    .filter(p -> !p.getUser().getId().equals(userId))
+                    .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
+                    .limit(10)
+                    .collect(Collectors.toList());
+            List<Map<String, Object>> formatted = formatPostsList(filtered, userId);
+            return ResponseEntity.ok(Map.of("success", true, "posts", formatted));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("success", false, "error", e.getMessage()));
+        }
+    }
+
+    private List<Map<String, Object>> formatPostsList(List<Post> posts, Long currentUserId) {
+        List<Map<String, Object>> formattedPosts = new ArrayList<>();
+        for (Post post : posts) {
+            Map<String, Object> p = new HashMap<>();
+            p.put("id", post.getId());
+            p.put("contenu", post.getContenu());
+            p.put("createdAt", post.getCreatedAt().toString());
+            p.put("likesCount", likeService.countByPost(post));
+            p.put("liked", likeService.isLiked(userService.findById(currentUserId).orElse(null), post));
+            p.put("imageData", post.getImageData());
+            p.put("imageType", post.getImageType());
+            p.put("fileData", post.getFileData());
+            p.put("fileType", post.getFileType());
+            p.put("fileName", post.getFileName());
+
+            if (post.getUser() != null) {
+                Map<String, Object> userMap = new HashMap<>();
+                userMap.put("id", post.getUser().getId());
+                userMap.put("nom", post.getUser().getNom());
+                userMap.put("email", post.getUser().getEmail());
+                userMap.put("role", post.getUser().getRole().name());
+                p.put("user", userMap);
+            }
+
+            List<Map<String, Object>> commentList = new ArrayList<>();
+            if (post.getComments() != null) {
+                for (Comment comment : post.getComments()) {
+                    Map<String, Object> c = new HashMap<>();
+                    c.put("id", comment.getId());
+                    c.put("contenu", comment.getContenu());
+                    c.put("createdAt", comment.getCreatedAt());
+                    if (comment.getUser() != null) {
+                        Map<String, Object> commentUser = new HashMap<>();
+                        commentUser.put("id", comment.getUser().getId());
+                        commentUser.put("nom", comment.getUser().getNom());
+                        c.put("user", commentUser);
+                    }
+                    commentList.add(c);
+                }
+            }
+            p.put("comments", commentList);
+            p.put("commentsCount", commentList.size());
+
+            formattedPosts.add(p);
+        }
+        return formattedPosts;
     }
 }

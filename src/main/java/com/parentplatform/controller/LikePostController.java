@@ -1,5 +1,6 @@
 package com.parentplatform.controller;
 
+import com.parentplatform.model.LikePost;
 import com.parentplatform.model.Post;
 import com.parentplatform.model.User;
 import com.parentplatform.service.LikePostService;
@@ -9,9 +10,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/likes")
@@ -88,5 +88,49 @@ public class LikePostController {
         response.put("success", true);
 
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/my-likes/{userId}")
+    public ResponseEntity<?> getPostsLikedByUser(@PathVariable Long userId) {
+        Optional<User> userOpt = userService.findById(userId);
+        if (!userOpt.isPresent()) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "error", "Utilisateur non trouvé"));
+        }
+        List<Post> posts = likeService.findPostsLikedByUser(userOpt.get());
+        List<Map<String, Object>> formatted = posts.stream().map(post -> {
+            Map<String, Object> p = new HashMap<>();
+            p.put("id", post.getId());
+            p.put("contenu", post.getContenu());
+            p.put("createdAt", post.getCreatedAt().toString());
+            p.put("likesCount", likeService.countByPost(post));
+            p.put("imageData", post.getImageData());
+            p.put("imageType", post.getImageType());
+            if (post.getUser() != null) {
+                Map<String, Object> userMap = new HashMap<>();
+                userMap.put("id", post.getUser().getId());
+                userMap.put("nom", post.getUser().getNom());
+                p.put("user", userMap);
+            }
+            return p;
+        }).collect(Collectors.toList());
+        return ResponseEntity.ok(Map.of("success", true, "posts", formatted));
+    }
+
+    @GetMapping("/received/users/{userId}")
+    public ResponseEntity<?> getUsersWhoLikedMyPosts(@PathVariable Long userId) {
+        Optional<User> userOpt = userService.findById(userId);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "error", "Utilisateur non trouvé"));
+        }
+        List<Post> posts = postService.findByUserId(userId);
+        Set<User> uniqueUsers = new HashSet<>();
+        for (Post post : posts) {
+            if (post.getLikes() != null) {
+                for (LikePost like : post.getLikes()) {
+                    uniqueUsers.add(like.getUser());
+                }
+            }
+        }
+        return ResponseEntity.ok(Map.of("success", true, "users", uniqueUsers));
     }
 }

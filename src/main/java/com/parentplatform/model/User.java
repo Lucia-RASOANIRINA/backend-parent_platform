@@ -24,6 +24,12 @@ public class User {
     @Column(nullable = false)
     private Role role;
 
+    // Nouveaux champs
+    private String telephone;      // pour tous les utilisateurs
+    private String adresse;        // pour tous les utilisateurs
+    private String lieuTravail;    // pour PSY et EDUCATEUR
+    private String specialite;     // pour PSY
+
     // Constructeurs
     public User() {}
 
@@ -34,7 +40,7 @@ public class User {
         this.role = role;
     }
 
-    // Getters et Setters
+    // Getters et Setters existants
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -49,4 +55,17 @@ public class User {
 
     public Role getRole() { return role; }
     public void setRole(Role role) { this.role = role; }
+
+    // Nouveaux getters et setters
+    public String getTelephone() { return telephone; }
+    public void setTelephone(String telephone) { this.telephone = telephone; }
+
+    public String getAdresse() { return adresse; }
+    public void setAdresse(String adresse) { this.adresse = adresse; }
+
+    public String getLieuTravail() { return lieuTravail; }
+    public void setLieuTravail(String lieuTravail) { this.lieuTravail = lieuTravail; }
+
+    public String getSpecialite() { return specialite; }
+    public void setSpecialite(String specialite) { this.specialite = specialite; }
 }

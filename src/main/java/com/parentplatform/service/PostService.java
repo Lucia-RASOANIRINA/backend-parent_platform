@@ -1,7 +1,9 @@
 package com.parentplatform.service;
 
+import com.parentplatform.model.LikePost;
 import com.parentplatform.model.Post;
 import com.parentplatform.model.User;
+import com.parentplatform.repository.LikePostRepository;
 import com.parentplatform.repository.PostRepository;
 import com.parentplatform.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +31,9 @@ public class PostService {
     @Autowired
     private CommentService commentService;
 
+    @Autowired
+    private LikePostRepository likePostRepository;
+
     @Transactional
     public Post save(Post post, Long userId) {
         Optional<User> user = userRepository.findById(userId);
@@ -52,6 +57,8 @@ public class PostService {
                 post.setLikesCount(likeService.countByPost(post));
                 post.setLiked(likeService.isLiked(user.get(), post));
                 post.setComments(commentService.getCommentsByPost(post));
+                List<LikePost> likes = likePostRepository.findByPost(post);
+                post.setLikes(likes);
             }
 
             return posts;
@@ -81,7 +88,6 @@ public class PostService {
             Post post = postOpt.get();
             post.setContenu(contenu);
 
-            // Gestion de l'image
             if (removeImage) {
                 post.setImageData(null);
                 post.setImageType(null);
@@ -91,7 +97,6 @@ public class PostService {
                 post.setImageType(image.getContentType());
             }
 
-            // Gestion du fichier (PDF)
             if (removeFile) {
                 post.setFileData(null);
                 post.setFileType(null);
@@ -106,5 +111,9 @@ public class PostService {
             return postRepository.save(post);
         }
         return null;
+    }
+
+    public List<Post> findPostsCommentedByUser(Long userId) {
+        return postRepository.findPostsCommentedByUser(userId);
     }
 }

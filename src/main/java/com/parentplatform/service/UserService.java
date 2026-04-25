@@ -82,4 +82,20 @@ public class UserService {
     public List<User> searchUsers(String query) {
         return userRepository.findByNomContainingIgnoreCaseOrEmailContainingIgnoreCase(query, query);
     }
+
+    public User updateProfile(Long userId, User updatedInfo) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+        user.setNom(updatedInfo.getNom());
+        user.setEmail(updatedInfo.getEmail());
+        if (updatedInfo.getPassword() != null && !updatedInfo.getPassword().isEmpty()) {
+            user.setPassword(encodePassword(updatedInfo.getPassword()));
+        }
+        // Nouveaux champs
+        user.setTelephone(updatedInfo.getTelephone());
+        user.setAdresse(updatedInfo.getAdresse());
+        user.setLieuTravail(updatedInfo.getLieuTravail());
+        user.setSpecialite(updatedInfo.getSpecialite());
+        return userRepository.save(user);
+    }
 }
