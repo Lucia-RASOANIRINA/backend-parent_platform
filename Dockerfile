@@ -2,6 +2,10 @@
 FROM maven:3.9-eclipse-temurin-17 AS build
 WORKDIR /app
 COPY . .
+
+# Correction de l'erreur de permission (Permission denied)
+RUN chmod +x mvnw
+
 RUN ./mvnw clean package -DskipTests
 
 # Étape 2 : Exécution de l'application
