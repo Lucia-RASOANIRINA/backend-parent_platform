@@ -1,5 +1,6 @@
 package com.parentplatform.controller;
 
+import com.parentplatform.api.ApiRoutes;
 import com.parentplatform.model.LikePost;
 import com.parentplatform.model.Post;
 import com.parentplatform.model.User;
@@ -14,8 +15,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/likes")
-@CrossOrigin(origins = "*")
+@RequestMapping(ApiRoutes.LIKES)
 public class LikePostController {
 
     @Autowired

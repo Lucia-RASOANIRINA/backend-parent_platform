@@ -35,6 +35,34 @@ public class Evenement {
     private String lieu;         // ex: "En ligne" ou "Fianarantsoa"
     private String animateur;    // host / intervenant
 
+    /** Région de Madagascar (Analamanga, Haute Matsiatra…) — sert au filtrage géographique. */
+    private String region;
+
+    /** Ville / commune précise (Antananarivo, Fianarantsoa…). */
+    private String ville;
+
+    /** Langue de l'évènement : fr | mg | en */
+    private String langue = "fr";
+
+    /** Prix en Ariary (MGA). 0 ou null = gratuit. */
+    private Integer prix = 0;
+
+    /** Mots-clés séparés par des virgules (ex : "sommeil,nourrisson,allaitement"). */
+    @Column(length = 500)
+    private String tags;
+
+    /**
+     * Évènement annulé : reste visible mais signalé aux inscrits.
+     * Type objet pour rester compatible avec les lignes déjà en base (valeur nulle).
+     */
+    private Boolean annule = Boolean.FALSE;
+
+    @Column(length = 500)
+    private String motifAnnulation;
+
+    /** true une fois le rappel « demain » envoyé aux inscrits. */
+    private Boolean rappelEnvoye = Boolean.FALSE;
+
     /** Nombre total de places disponibles */
     private Integer capacite = 20;
 
@@ -89,6 +117,44 @@ public class Evenement {
 
     public String getAnimateur() { return animateur; }
     public void setAnimateur(String animateur) { this.animateur = animateur; }
+
+    public String getRegion() { return region; }
+    public void setRegion(String region) { this.region = region; }
+
+    public String getVille() { return ville; }
+    public void setVille(String ville) { this.ville = ville; }
+
+    public String getLangue() { return langue; }
+    public void setLangue(String langue) { this.langue = langue; }
+
+    public Integer getPrix() { return prix; }
+    public void setPrix(Integer prix) { this.prix = prix; }
+
+    public String getTags() { return tags; }
+    public void setTags(String tags) { this.tags = tags; }
+
+    public boolean isAnnule() { return Boolean.TRUE.equals(annule); }
+    public void setAnnule(boolean annule) { this.annule = annule; }
+
+    public String getMotifAnnulation() { return motifAnnulation; }
+    public void setMotifAnnulation(String motifAnnulation) { this.motifAnnulation = motifAnnulation; }
+
+    public boolean isRappelEnvoye() { return Boolean.TRUE.equals(rappelEnvoye); }
+    public void setRappelEnvoye(boolean rappelEnvoye) { this.rappelEnvoye = rappelEnvoye; }
+
+    /**
+     * Statut calculé, utilisé par les filtres de l'espace évènements.
+     * ANNULE > A_VENIR > AUJOURDHUI > TERMINE
+     */
+    @Transient
+    public String getStatut() {
+        if (isAnnule()) return "ANNULE";
+        if (date == null) return "A_VENIR";
+        LocalDate today = LocalDate.now();
+        if (date.isBefore(today)) return "TERMINE";
+        if (date.isEqual(today)) return "AUJOURDHUI";
+        return "A_VENIR";
+    }
 
     public Integer getCapacite() { return capacite; }
     public void setCapacite(Integer capacite) { this.capacite = capacite; }

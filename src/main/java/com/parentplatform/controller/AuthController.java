@@ -1,11 +1,13 @@
 package com.parentplatform.controller;
 
+import com.parentplatform.api.ApiRoutes;
 import com.parentplatform.model.User;
 import com.parentplatform.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
 import java.util.List;
@@ -14,8 +16,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/auth")
-@CrossOrigin(originPatterns = "*", allowCredentials = "true", allowedHeaders = "*")
+@RequestMapping(ApiRoutes.AUTH)
 public class AuthController {
 
     @Autowired
@@ -135,5 +136,53 @@ public class AuthController {
         } catch (Exception e) {
             return ResponseEntity.status(400).body(Map.of("error", e.getMessage(), "success", false));
         }
+    }
+
+    /**
+     * Photo de profil. Elle est stockée en base : la plateforme ne dispose pas
+     * de serveur de fichiers, et les images de profil restent petites.
+     */
+    @PostMapping("/profile/photo")
+    public ResponseEntity<?> televerserPhoto(@RequestParam("fichier") MultipartFile fichier,
+                                            @RequestHeader("X-User-Id") Long userId) {
+        try {
+            if (fichier == null || fichier.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Fichier vide", "success", false));
+            }
+            String type = fichier.getContentType();
+            if (type == null || !type.startsWith("image/")) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Le fichier doit être une image", "success", false));
+            }
+            if (fichier.getSize() > 2 * 1024 * 1024) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Image trop lourde (2 Mo maximum)", "success", false));
+            }
+            User user = userService.enregistrerPhoto(userId, fichier.getBytes(), type);
+            return ResponseEntity.ok(Map.of("user", user, "success", true));
+        } catch (Exception e) {
+            return ResponseEntity.status(400).body(Map.of("error", e.getMessage(), "success", false));
+        }
+    }
+
+    @DeleteMapping("/profile/photo")
+    public ResponseEntity<?> retirerPhoto(@RequestHeader("X-User-Id") Long userId) {
+        try {
+            User user = userService.enregistrerPhoto(userId, null, null);
+            return ResponseEntity.ok(Map.of("user", user, "success", true));
+        } catch (Exception e) {
+            return ResponseEntity.status(400).body(Map.of("error", e.getMessage(), "success", false));
+        }
+    }
+
+    /** Sert l'image : accessible sans jeton, l'avatar est visible de tous. */
+    @GetMapping("/{id}/photo")
+    public ResponseEntity<byte[]> photo(@PathVariable Long id) {
+        User user = userService.parId(id);
+        if (user == null || user.getPhoto() == null || user.getPhoto().length == 0) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok()
+                .header("Content-Type", user.getPhotoType() != null ? user.getPhotoType() : "image/jpeg")
+                .header("Cache-Control", "no-cache")
+                .body(user.getPhoto());
     }
 }

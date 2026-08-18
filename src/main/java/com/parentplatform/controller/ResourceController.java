@@ -1,5 +1,6 @@
 package com.parentplatform.controller;
 
+import com.parentplatform.api.ApiRoutes;
 import com.parentplatform.dto.ResourceCreateDTO;
 import com.parentplatform.model.*;
 import com.parentplatform.service.ResourceService;
@@ -17,8 +18,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/resources")
-@CrossOrigin(origins = "*")
+@RequestMapping(ApiRoutes.RESOURCES)
 public class ResourceController {
 
     @Autowired

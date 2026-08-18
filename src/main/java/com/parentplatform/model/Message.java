@@ -28,13 +28,31 @@ public class Message {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
+    /** TEXT, IMAGE, FILE, AUDIO (message vocal) */
     @Column(name = "message_type")
-    private String messageType = "TEXT"; // TEXT, IMAGE, FILE
+    private String messageType = "TEXT";
 
     @Column(columnDefinition = "TEXT")
     private String fileData;
 
     private String fileName;
+
+    /** Type MIME de la pièce jointe (image/png, audio/webm…). */
+    @Column(name = "file_type")
+    private String fileType;
+
+    /** Durée en secondes pour un message vocal. */
+    @Column(name = "duration_seconds")
+    private Integer durationSeconds;
+
+    /** true si l'auteur a modifié son message (affiché « modifié »). */
+    private Boolean modifie = Boolean.FALSE;
+
+    /** Suppression douce : le message reste dans le fil, signalé comme retiré. */
+    private Boolean supprime = Boolean.FALSE;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 
     public Message() {
         this.createdAt = LocalDateTime.now();
@@ -67,4 +85,19 @@ public class Message {
 
     public String getFileName() { return fileName; }
     public void setFileName(String fileName) { this.fileName = fileName; }
+
+    public String getFileType() { return fileType; }
+    public void setFileType(String fileType) { this.fileType = fileType; }
+
+    public Integer getDurationSeconds() { return durationSeconds; }
+    public void setDurationSeconds(Integer durationSeconds) { this.durationSeconds = durationSeconds; }
+
+    public boolean isModifie() { return Boolean.TRUE.equals(modifie); }
+    public void setModifie(boolean modifie) { this.modifie = modifie; }
+
+    public boolean isSupprime() { return Boolean.TRUE.equals(supprime); }
+    public void setSupprime(boolean supprime) { this.supprime = supprime; }
+
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 }

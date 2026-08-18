@@ -24,6 +24,13 @@ public class Comment {
     @Column(name = "created_at")
     private String createdAt;
 
+    /** Commentaire parent : renseigné lorsqu'il s'agit d'une réponse. */
+    @Column(name = "parent_id")
+    private Long parentId;
+
+    /** true dès que l'auteur a modifié son commentaire (affiché « modifié »). */
+    private Boolean modifie = Boolean.FALSE;
+
     // CONSTRUCTEUR
     public Comment() {
         this.createdAt = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date());
@@ -75,5 +82,21 @@ public class Comment {
 
     public void setCreatedAt(String createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public Long getParentId() {
+        return parentId;
+    }
+
+    public void setParentId(Long parentId) {
+        this.parentId = parentId;
+    }
+
+    public boolean isModifie() {
+        return Boolean.TRUE.equals(modifie);
+    }
+
+    public void setModifie(boolean modifie) {
+        this.modifie = modifie;
     }
 }

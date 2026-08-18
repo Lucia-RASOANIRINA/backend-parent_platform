@@ -1,8 +1,10 @@
 package com.parentplatform.controller;
 
+import com.parentplatform.api.ApiRoutes;
 import com.parentplatform.model.Comment;
 import com.parentplatform.model.Post;
 import com.parentplatform.model.User;
+import com.parentplatform.service.CommentService;
 import com.parentplatform.service.LikePostService;
 import com.parentplatform.service.PostService;
 import com.parentplatform.service.UserService;
@@ -18,12 +20,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/posts")
-@CrossOrigin(origins = "*")
+@RequestMapping(ApiRoutes.POSTS)
 public class PostController {
 
     @Autowired
@@ -34,6 +36,9 @@ public class PostController {
 
     @Autowired
     private LikePostService likeService;
+
+    @Autowired
+    private CommentService commentService;
 
     @PostMapping("/create")
     public ResponseEntity<?> create(
@@ -214,7 +219,13 @@ public class PostController {
     @GetMapping("/all-posts")
     public ResponseEntity<?> getAllPostsForFeed() {
         try {
-            List<Post> posts = postService.findAll();
+            // Tout est préchargé en quelques requêtes : sans cela, chaque publication
+            // en déclenchait plusieurs (auteur, likes, commentaires, auteur de chaque
+            // commentaire), soit une attente de plusieurs secondes sur base distante.
+            List<Post> posts = postService.filAvecAuteurs();
+            Map<Long, Long> compteursLikes = likeService.compteursParPublication();
+            Map<Long, Set<Long>> auteursLikes = likeService.auteursParPublication();
+            Map<Long, List<Comment>> commentairesParPost = commentService.parPublication();
 
             posts.sort((p1, p2) -> p2.getCreatedAt().compareTo(p1.getCreatedAt()));
 
@@ -226,20 +237,9 @@ public class PostController {
                 p.put("contenu", post.getContenu());
                 p.put("createdAt", post.getCreatedAt().toString());
 
-                int likesCount = 0;
-                boolean isLiked = false;
-
-                if (likeService != null) {
-                    try {
-                        likesCount = likeService.countByPost(post);
-                        if (post.getUser() != null) {
-                            Optional<User> userOpt = userService.findById(post.getUser().getId());
-                            if (userOpt.isPresent()) {
-                                isLiked = likeService.isLiked(userOpt.get(), post);
-                            }
-                        }
-                    } catch (Exception e) {}
-                }
+                long likesCount = compteursLikes.getOrDefault(post.getId(), 0L);
+                boolean isLiked = post.getUser() != null
+                        && auteursLikes.getOrDefault(post.getId(), Set.of()).contains(post.getUser().getId());
 
                 p.put("likesCount", likesCount);
                 p.put("liked", isLiked);
@@ -259,8 +259,9 @@ public class PostController {
                 }
 
                 List<Map<String, Object>> commentList = new ArrayList<>();
-                if (post.getComments() != null) {
-                    for (Comment comment : post.getComments()) {
+                List<Comment> commentaires = commentairesParPost.get(post.getId());
+                if (commentaires != null) {
+                    for (Comment comment : commentaires) {
                         Map<String, Object> c = new HashMap<>();
                         c.put("id", comment.getId());
                         c.put("contenu", comment.getContenu());

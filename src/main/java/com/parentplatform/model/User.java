@@ -1,6 +1,7 @@
 package com.parentplatform.model;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 @Entity
@@ -29,6 +30,13 @@ public class User {
     private String adresse;        // pour tous les utilisateurs
     private String lieuTravail;    // pour PSY et EDUCATEUR
     private String specialite;     // pour PSY
+
+    /** Photo de profil, stockée en base : la plateforme n'a pas de serveur de fichiers. */
+    @Column(columnDefinition = "bytea")
+    @JsonIgnore
+    private byte[] photo;
+
+    private String photoType;      // « image/png », « image/jpeg »…
 
     // Constructeurs
     public User() {}
@@ -68,4 +76,14 @@ public class User {
 
     public String getSpecialite() { return specialite; }
     public void setSpecialite(String specialite) { this.specialite = specialite; }
+
+    public byte[] getPhoto() { return photo; }
+    public void setPhoto(byte[] photo) { this.photo = photo; }
+
+    public String getPhotoType() { return photoType; }
+    public void setPhotoType(String photoType) { this.photoType = photoType; }
+
+    /** Le client a seulement besoin de savoir s'il doit aller chercher l'image. */
+    @Transient
+    public boolean isAPhoto() { return photo != null && photo.length > 0; }
 }

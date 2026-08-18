@@ -1,5 +1,6 @@
 package com.parentplatform.controller;
 
+import com.parentplatform.api.ApiRoutes;
 import com.parentplatform.model.Post;
 import com.parentplatform.model.Resource;
 import com.parentplatform.model.Role;
@@ -22,8 +23,7 @@ import java.util.Map;
  * et modération du contenu (évènements, posts, ressources).
  */
 @RestController
-@RequestMapping("/api/admin")
-@CrossOrigin(originPatterns = "*", allowCredentials = "true", allowedHeaders = "*")
+@RequestMapping(ApiRoutes.ADMIN)
 public class AdminController {
 
     @Autowired private UserRepository userRepository;

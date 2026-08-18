@@ -19,7 +19,20 @@ public class CommentService {
     @Autowired
     private CommentRepository commentRepository;
 
+    @Autowired
+    private TraductionService traductionService;
+
     @Transactional
+    /** Tous les commentaires groupés par publication, en une seule requête. */
+    public Map<Long, List<Comment>> parPublication() {
+        Map<Long, List<Comment>> map = new java.util.HashMap<>();
+        for (Comment c : commentRepository.findTousAvecAuteurs()) {
+            if (c.getPost() == null) continue;
+            map.computeIfAbsent(c.getPost().getId(), k -> new java.util.ArrayList<>()).add(c);
+        }
+        return map;
+    }
+
     public Map<String, Object> add(Comment comment, User user, Post post) {
         Map<String, Object> response = new HashMap<>();
 
@@ -58,16 +71,24 @@ public class CommentService {
         commentRepository.deleteByPost(post);
     }
 
+    /** Réponses rattachées à un commentaire. */
+    public List<Comment> reponsesDe(Long parentId) {
+        return commentRepository.findByParentId(parentId);
+    }
+
     public Optional<Comment> findById(Long id) {
         return commentRepository.findById(id);
     }
 
     public Comment save(Comment comment) {
-        return commentRepository.save(comment);
+        Comment enregistre = commentRepository.save(comment);
+        traductionService.traduireContenu("COMMENT", enregistre.getId(), enregistre.getContenu(), "fr");
+        return enregistre;
     }
 
     @Transactional
     public void delete(Long id) {
+        traductionService.supprimerPour("COMMENT", id);
         commentRepository.deleteById(id);
     }
 }

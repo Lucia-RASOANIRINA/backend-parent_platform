@@ -43,6 +43,24 @@ public class LikePostService {
         return response;
     }
 
+    /** Nombre de « j'aime » par publication, en une seule requête. */
+    public Map<Long, Long> compteursParPublication() {
+        Map<Long, Long> map = new java.util.HashMap<>();
+        for (Object[] ligne : likeRepository.compterParPost()) {
+            map.put((Long) ligne[0], (Long) ligne[1]);
+        }
+        return map;
+    }
+
+    /** Qui a aimé quoi : publication → identifiants des utilisateurs. */
+    public Map<Long, java.util.Set<Long>> auteursParPublication() {
+        Map<Long, java.util.Set<Long>> map = new java.util.HashMap<>();
+        for (Object[] ligne : likeRepository.tousLesLikes()) {
+            map.computeIfAbsent((Long) ligne[0], k -> new java.util.HashSet<>()).add((Long) ligne[1]);
+        }
+        return map;
+    }
+
     public int countByPost(Post post) {
         return likeRepository.countByPost(post);
     }

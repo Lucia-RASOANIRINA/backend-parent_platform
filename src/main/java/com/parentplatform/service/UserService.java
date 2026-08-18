@@ -121,4 +121,17 @@ public class UserService {
         user.setSpecialite(updatedInfo.getSpecialite());
         return userRepository.save(user);
     }
+
+    /** Enregistre (ou retire, avec des octets nuls) la photo de profil. */
+    public User enregistrerPhoto(Long userId, byte[] octets, String type) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+        user.setPhoto(octets);
+        user.setPhotoType(octets == null ? null : type);
+        return userRepository.save(user);
+    }
+
+    public User parId(Long id) {
+        return userRepository.findById(id).orElse(null);
+    }
 }

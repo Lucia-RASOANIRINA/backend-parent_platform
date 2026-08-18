@@ -32,6 +32,9 @@ public class PostService {
     private CommentService commentService;
 
     @Autowired
+    private TraductionService traductionService;
+
+    @Autowired
     private LikePostRepository likePostRepository;
 
     @Transactional
@@ -39,9 +42,16 @@ public class PostService {
         Optional<User> user = userRepository.findById(userId);
         if (user.isPresent()) {
             post.setUser(user.get());
-            return postRepository.save(post);
+            Post enregistre = postRepository.save(post);
+            traductionService.traduireContenu("POST", enregistre.getId(), enregistre.getContenu(), "fr");
+            return enregistre;
         }
         return null;
+    }
+
+    /** Fil d'actualité : publications et auteurs chargés en une seule requête. */
+    public List<Post> filAvecAuteurs() {
+        return postRepository.findFilAvecAuteurs();
     }
 
     public List<Post> findAll() {
@@ -75,6 +85,7 @@ public class PostService {
         Optional<Post> post = postRepository.findById(id);
         if (post.isPresent()) {
             commentService.deleteByPost(post.get());
+            traductionService.supprimerPour("POST", id);
             postRepository.deleteById(id);
         }
     }

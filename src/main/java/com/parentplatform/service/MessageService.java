@@ -42,6 +42,37 @@ public class MessageService {
         conversationRepository.deleteById(conversationId);
     }
 
+    public Message findById(Long id) {
+        return messageRepository.findById(id).orElse(null);
+    }
+
+    /** Modification d'un message texte par son auteur. */
+    @Transactional
+    public Message modifier(Message message, String contenu) {
+        message.setContenu(contenu);
+        message.setModifie(true);
+        message.setUpdatedAt(LocalDateTime.now());
+        return messageRepository.save(message);
+    }
+
+    /**
+     * Suppression douce : le message reste à sa place dans le fil mais son
+     * contenu et ses pièces jointes sont retirés — comportement attendu sur
+     * les messageries grand public.
+     */
+    @Transactional
+    public Message supprimer(Message message) {
+        message.setSupprime(true);
+        message.setContenu("Message supprimé");
+        message.setFileData(null);
+        message.setFileName(null);
+        message.setFileType(null);
+        message.setDurationSeconds(null);
+        message.setMessageType("TEXT");
+        message.setUpdatedAt(LocalDateTime.now());
+        return messageRepository.save(message);
+    }
+
     private void updateConversation(User sender, User receiver, String lastMessage) {
         Optional<Conversation> existingConv = conversationRepository.findByUser1AndUser2(sender, receiver);
         if (existingConv.isEmpty()) {

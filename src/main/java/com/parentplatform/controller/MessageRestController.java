@@ -1,5 +1,6 @@
 package com.parentplatform.controller;
 
+import com.parentplatform.api.ApiRoutes;
 import com.parentplatform.model.Message;
 import com.parentplatform.model.User;
 import com.parentplatform.service.MessageService;
@@ -11,8 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.*;
 
 @RestController
-@RequestMapping("/api/messages")
-@CrossOrigin(origins = "*", allowedHeaders = "*")
+@RequestMapping(ApiRoutes.MESSAGES)
 public class MessageRestController {
 
     @Autowired
@@ -35,8 +35,10 @@ public class MessageRestController {
                 m.put("messageType", msg.getMessageType());
                 m.put("fileData", msg.getFileData());
                 m.put("fileName", msg.getFileName());
-                // Si vous n'avez pas l'attribut fileType, commentez la ligne suivante
-                // m.put("fileType", msg.getFileType());
+                m.put("fileType", msg.getFileType());
+                m.put("durationSeconds", msg.getDurationSeconds());
+                m.put("modifie", msg.isModifie());
+                m.put("supprime", msg.isSupprime());
 
                 Map<String, Object> sender = new HashMap<>();
                 if (msg.getSender() != null) {
@@ -88,6 +90,58 @@ public class MessageRestController {
             Long otherUserId = request.get("otherUserId");
             messageService.markMessagesAsUnread(userId, otherUserId);
             return ResponseEntity.ok(Map.of("success", true, "message", "Messages marqués comme non lus"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("success", false, "error", e.getMessage()));
+        }
+    }
+
+    /** Modification d'un message déjà envoyé (texte uniquement, par son auteur). */
+    @PutMapping("/{messageId}")
+    public ResponseEntity<?> modifierMessage(@PathVariable Long messageId,
+                                             @RequestBody Map<String, String> payload,
+                                             @RequestHeader("X-User-Id") Long userId) {
+        try {
+            Message message = messageService.findById(messageId);
+            if (message == null) {
+                return ResponseEntity.status(404).body(Map.of("success", false, "error", "Message introuvable"));
+            }
+            if (message.getSender() == null || !message.getSender().getId().equals(userId)) {
+                return ResponseEntity.status(403).body(Map.of("success", false, "error", "Vous n'êtes pas l'auteur de ce message"));
+            }
+            if (message.isSupprime()) {
+                return ResponseEntity.badRequest().body(Map.of("success", false, "error", "Ce message a été supprimé"));
+            }
+            if (!"TEXT".equals(message.getMessageType())) {
+                return ResponseEntity.badRequest().body(Map.of("success", false, "error", "Seuls les messages texte sont modifiables"));
+            }
+            String contenu = payload.get("contenu");
+            if (contenu == null || contenu.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("success", false, "error", "Le message ne peut pas être vide"));
+            }
+            Message enregistre = messageService.modifier(message, contenu.trim());
+            return ResponseEntity.ok(Map.of("success", true, "message", Map.of(
+                    "id", enregistre.getId(),
+                    "contenu", enregistre.getContenu(),
+                    "modifie", enregistre.isModifie())));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("success", false, "error", e.getMessage()));
+        }
+    }
+
+    /** Retrait d'un message : il reste dans le fil, signalé comme supprimé. */
+    @DeleteMapping("/{messageId}")
+    public ResponseEntity<?> supprimerMessage(@PathVariable Long messageId,
+                                              @RequestHeader("X-User-Id") Long userId) {
+        try {
+            Message message = messageService.findById(messageId);
+            if (message == null) {
+                return ResponseEntity.status(404).body(Map.of("success", false, "error", "Message introuvable"));
+            }
+            if (message.getSender() == null || !message.getSender().getId().equals(userId)) {
+                return ResponseEntity.status(403).body(Map.of("success", false, "error", "Vous n'êtes pas l'auteur de ce message"));
+            }
+            messageService.supprimer(message);
+            return ResponseEntity.ok(Map.of("success", true, "message", "Message supprimé"));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("success", false, "error", e.getMessage()));
         }

@@ -1,5 +1,6 @@
 package com.parentplatform.controller;
 
+import com.parentplatform.api.ApiRoutes;
 import com.parentplatform.model.Role;
 import com.parentplatform.model.User;
 import com.parentplatform.repository.EvenementRepository;
@@ -19,8 +20,7 @@ import java.util.Map;
  * issues de la base de données.
  */
 @RestController
-@RequestMapping("/api/stats")
-@CrossOrigin(originPatterns = "*", allowCredentials = "true", allowedHeaders = "*")
+@RequestMapping(ApiRoutes.STATS)
 public class StatsController {
 
     @Autowired private UserRepository userRepository;

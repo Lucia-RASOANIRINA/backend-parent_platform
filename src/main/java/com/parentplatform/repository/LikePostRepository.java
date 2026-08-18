@@ -26,4 +26,12 @@ public interface LikePostRepository extends JpaRepository<LikePost, Long> {
     List<Post> findPostsByUser(@Param("user") User user);
 
     List<LikePost> findByPost(Post post);
+
+    /** Nombre de « j'aime » par publication, en une seule requête. */
+    @Query("SELECT l.post.id, COUNT(l) FROM LikePost l GROUP BY l.post.id")
+    List<Object[]> compterParPost();
+
+    /** Couples (publication, utilisateur) : sert à savoir qui a aimé quoi. */
+    @Query("SELECT l.post.id, l.user.id FROM LikePost l")
+    List<Object[]> tousLesLikes();
 }
